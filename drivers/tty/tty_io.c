@@ -371,6 +371,7 @@ struct tty_driver *tty_find_polling_driver(char *name, int *line)
 	mutex_lock(&tty_mutex);
 	/* Search through the tty devices to look for a match */
 	list_for_each_entry(p, &tty_drivers, tty_drivers) {
+        pr_info("name: %s p->name: %s p->driver_name: %s\n", name, p->name, p->driver_name);
 		if (strncmp(name, p->name, len) != 0)
 			continue;
 		stp = str;
@@ -2570,28 +2571,6 @@ static int tiocsetd(struct tty_struct *tty, int __user *p)
 }
 
 /**
- *	tiocgetd	-	get line discipline
- *	@tty: tty device
- *	@p: pointer to user data
- *
- *	Retrieves the line discipline id directly from the ldisc.
- *
- *	Locking: waits for ldisc reference (in case the line discipline
- *		is changing or the tty is being hungup)
- */
-
-static int tiocgetd(struct tty_struct *tty, int __user *p)
-{
-	struct tty_ldisc *ld;
-	int ret;
-
-	ld = tty_ldisc_ref_wait(tty);
-	ret = put_user(ld->ops->num, p);
-	tty_ldisc_deref(ld);
-	return ret;
-}
-
-/**
  *	send_break	-	performed time break
  *	@tty: device to break on
  *	@duration: timeout in mS
@@ -2808,7 +2787,7 @@ long tty_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 	case TIOCGSID:
 		return tiocgsid(tty, real_tty, p);
 	case TIOCGETD:
-		return tiocgetd(tty, p);
+		return put_user(tty->ldisc->ops->num, (int __user *)p);
 	case TIOCSETD:
 		return tiocsetd(tty, p);
 	case TIOCVHANGUP:
